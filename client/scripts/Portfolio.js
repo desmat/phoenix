@@ -1,4 +1,8 @@
 var Portfolio = React.createClass({
+	view: function() {
+		this.props.viewPortfolio(this.props.id);
+	}, 
+
 	delete: function() {
 		this.props.deletePortfolio(this.props.id);
 	}, 
@@ -13,7 +17,7 @@ var Portfolio = React.createClass({
 	render: function() {
 		return (
 			<div className="portfolio">
-				<li>portfolio: <b>{this.props.name}</b> <a href='#' onClick={this.delete}>[Delete]</a> <a href='#' onClick={this.rename}>[Rename]</a></li>
+				<li>{this.props.name} <a href='#' onClick={this.view}>[View]</a> <a href='#' onClick={this.delete}>[Delete]</a> <a href='#' onClick={this.rename}>[Rename]</a></li>
 			</div>
 		);
 	}
@@ -63,23 +67,36 @@ var PortfolioList = React.createClass({
 	},
 
 	renamePortfolio: function(id, name) {
-		_.findWhere(this.state.data, {id:id}).name=name;
-		this.setState({data: this.state.data});
+		var portfolio = _.findWhere(this.state.data, {id:id});
+		if (portfolio) {
+			portfolio.name=name;
+			this.setState({data: this.state.data});
 
-		$.ajax({
-			url: '/api/portfolios/' + id,
-			dataType: 'json',
-			method: 'PUT',
-			contentType: 'application/json',
-			data: JSON.stringify({name:name}),
-			cache: false,
-			success: function(data) {
-				//already deleted on the front-end
-			}.bind(this),
-			error: function(xhr, status, err) {
-				console.error(this.props.url, status, err.toString());
-			}.bind(this)
-		});
+			$.ajax({
+				url: '/api/portfolios/' + id,
+				dataType: 'json',
+				method: 'PUT',
+				contentType: 'application/json',
+				data: JSON.stringify({name:name}),
+				cache: false,
+				success: function(data) {
+					//already deleted on the front-end
+				}.bind(this),
+				error: function(xhr, status, err) {
+					console.error(this.props.url, status, err.toString());
+				}.bind(this)
+			});
+		}
+	},
+
+	viewPortfolio: function(id) {
+		var portfolio = _.findWhere(this.state.data, {id: id});
+		if (portfolio) {
+			React.render(
+				<PortfolioDetails data={portfolio} />,
+		  	  	document.body
+			);
+		}
 	},
 
 	getInitialState: function() {
@@ -106,7 +123,7 @@ var PortfolioList = React.createClass({
 		if (this.state.data) {
 			var portfolios = this.state.data.map(function(portfolio) {
 				return (
-					<Portfolio name={portfolio.name} id={portfolio.id} data={self.state.data} deletePortfolio={self.deletePortfolio} renamePortfolio={self.renamePortfolio} />
+					<Portfolio name={portfolio.name} id={portfolio.id} data={self.state.data} deletePortfolio={self.deletePortfolio} renamePortfolio={self.renamePortfolio} viewPortfolio={self.viewPortfolio} />
 				);
 			});
 		}
@@ -126,8 +143,36 @@ var PortfolioListContainer = React.createClass({
 	render: function() {
 		return(
 			<div class="portfolioListContainer">
+				<h1>Portfolios</h1>
 				<PortfolioList />
 			</div>
 		);
 	}	
+});
+
+var PortfolioDetails = React.createClass({
+	back: function() {
+		React.render(
+			<PortfolioListContainer />,
+		  	document.body
+		);
+	}, 
+
+	render: function() {
+		return(
+			<div class="portfolioDetails">
+				<h1>Portfolio: {this.props.data.name}</h1>
+				<i>Portfolio details here</i>				
+				<br />
+				<br />
+				<a href="#" onClick={this.back}>[Back]</a>
+			</div>
+		);
+	}
 })
+
+React.render(
+	<PortfolioListContainer />,
+  	document.body
+);
+
