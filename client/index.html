@@ -11,39 +11,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/react-with-addons.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/JSXTransformer.js"></script>
 <script type="text/jsx" src="scripts/Portfolio.js"></script>
-<script>
-	$("#addButton").click(function() {
-		PortfolioListContainer.addPortfolio();
-	});
-
-// 	$.ajax({
-// 		url:'/api/portfolios/'
-// 		,dataType: 'json'
-// 		,success: function(result) {
-// 			$('#loading').text('');
-// 			_.each(result, function(portfolio) {
-// 				$('#portfolios').append('<li>' + portfolio.name);
-// 			});
-// 		}
-// 	});
-
-</script>
 <script type="text/jsx">
 React.render(
 	<PortfolioListContainer />,
   	document.getElementById('content')
 );
-
-
-	// $.ajax({
-	// 	url:'/api/portfolios/'
-	// 	,dataType: 'json'
-	// 	,success: function(result) {
-	// 		React.render(
-	// 			<PortfolioList data={result} />,
-	// 			document.getElementById('content')
-	// 		);
-	// 	}
-	// });
 </script>
 </html>
