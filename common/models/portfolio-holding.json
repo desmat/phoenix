@@ -1,25 +1,29 @@
 {
-  "name": "Portfolio",
+  "name": "PortfolioHolding",
   "base": "PersistedModel",
   "idInjection": true,
   "options": {
     "validateUpsert": true
   },
   "properties": {
-    "name": {
+    "ticker": {
       "type": "string",
       "required": true
     },
-    "cash": {
+    "shares": {
+      "type": "string",
+      "required": true
+    },
+    "bookValue": {
       "type": "number",
       "required": true
     }
   },
   "validations": [],
   "relations": {
-    "portfolioHoldings": {
-      "type": "hasMany",
-      "model": "PortfolioHolding",
+    "portfolio": {
+      "type": "belongsTo",
+      "model": "Portfolio",
       "foreignKey": "portfolioId"
     }
   },
