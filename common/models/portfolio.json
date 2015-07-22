@@ -12,7 +12,11 @@
     },
     "cash": {
       "type": "number",
-      "required": true
+      "required": false
+    },
+    "value": {
+      "type": "number",
+      "required": false
     }
   },
   "validations": [],

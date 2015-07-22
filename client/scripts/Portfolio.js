@@ -161,7 +161,7 @@ var PortfolioHolding = React.createClass({
 
 	render : function() {
 		return (
-			<li>{this.props.data.ticker} ({this.props.data.shares} shares, ${this.props.data.bookValue} value) <a href="#" onClick={this.sell}>[Sell]</a> <a href="#" onClick={this.buy}>[Buy]</a></li>
+			<li>{this.props.data.name} ({this.props.data.ticker}): {this.props.data.shares} shares, ${this.props.data.bookValue} cost <a href="#" onClick={this.sell}>[Sell]</a> <a href="#" onClick={this.buy}>[Buy]</a></li>
 		);
 	}
 })
@@ -179,6 +179,22 @@ var PortfolioDetails = React.createClass({
 			success: function(data) {
 				React.render(
 					<PortfolioDetails data={data} />,
+				  	document.body
+				);
+			}.bind(this),
+			error: function(xhr, status, err) {
+				console.error(this.props.url, status, err.toString());
+			}.bind(this)
+		});
+
+		$.ajax({
+			url: '/api/portfolios/' + this.props.data.id + '/value',
+			dataType: 'json',
+			cache: false,
+			success: function(data) {
+				this.props.data.value = data.value;
+				React.render(
+					<PortfolioDetails data={this.props.data} />,
 				  	document.body
 				);
 			}.bind(this),
@@ -219,6 +235,7 @@ var PortfolioDetails = React.createClass({
 	},
 
 	buyHolding: function(ticker) {
+		ticker = ticker.toUpperCase();
 		var self = this;
 		var portfolioHolding = _.findWhere(this.state.holdings, {ticker: ticker});
 		//portfolio already contains this holding
@@ -238,6 +255,7 @@ var PortfolioDetails = React.createClass({
 				}.bind(this),
 				error: function(xhr, status, err) {
 					console.error(this.props.url, status, err.toString());
+					_.findWhere(this.state.holdings, {ticker: ticker});
 				}.bind(this)
 			});			
 		}
@@ -258,6 +276,9 @@ var PortfolioDetails = React.createClass({
 				}.bind(this),
 				error: function(xhr, status, err) {
 					console.error(this.props.url, status, err.toString());
+					//remove ticker from front-end
+					var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
+					this.setState({holdings: portfolioHoldings});
 				}.bind(this)
 			});			
 		}
@@ -322,7 +343,7 @@ var PortfolioDetails = React.createClass({
 		return(
 			<div class="portfolioDetails">
 				<h1>Portfolio: {this.props.data.name}</h1>
-				<h2>Value: ${123,456.78}</h2>
+				<h2>Value: ${this.props.data.value}</h2>
 				<h2>Cash: ${this.props.data.cash}</h2>
 				<h2>Holdings</h2>
 				<ul>
