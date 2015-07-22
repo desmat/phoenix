@@ -35,5 +35,9 @@
   "Portfolio": {
     "dataSource": "db",
     "public": true
+  },
+  "PortfolioHolding": {
+    "dataSource": "db",
+    "public": true
   }
 }
