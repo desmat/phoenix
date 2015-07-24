@@ -228,7 +228,7 @@ var PortfolioDetails = React.createClass({
 	}, 
 
 	addHolding: function() {
-		var ticker = window.prompt("Ticker", "XXX");
+		var ticker = window.prompt("Ticker");
 		if (ticker) {
 			this.buyHolding(ticker);
 		}
@@ -294,7 +294,7 @@ var PortfolioDetails = React.createClass({
 				var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
 				this.setState({holdings: portfolioHoldings});
 
-				$.ajaxQueue({
+				$.ajax({
 					url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
 					dataType: 'json',
 					method: 'DELETE',
@@ -310,7 +310,7 @@ var PortfolioDetails = React.createClass({
 			else {
 				this.setState({holdings: this.state.holdings});
 
-				$.ajaxQueue({
+				$.ajax({
 					url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
 					dataType: 'json',
 					method: 'PUT',
