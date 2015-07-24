@@ -161,7 +161,7 @@ var PortfolioHolding = React.createClass({
 
 	render : function() {
 		return (
-			<li>{this.props.data.name} ({this.props.data.ticker}): {this.props.data.shares} shares, ${this.props.data.bookValue} cost <a href="#" onClick={this.sell}>[Sell]</a> <a href="#" onClick={this.buy}>[Buy]</a></li>
+			<li>{this.props.data.name} ({this.props.data.ticker}): {this.props.data.shares} shares, ${this.props.data.cost} cost <a href="#" onClick={this.sell}>[Sell]</a> <a href="#" onClick={this.buy}>[Buy]</a></li>
 		);
 	}
 })
@@ -261,7 +261,7 @@ var PortfolioDetails = React.createClass({
 		}
 		//portfolio does not contain this holding
 		else {
-			portfolioHolding = {id:0, ticker:ticker, shares:1, bookValue:0};
+			portfolioHolding = {id:0, ticker:ticker, shares:1, cost:0};
 			this.setState({holdings: this.state.holdings.concat(portfolioHolding)}); //id will be updated later
 
 			$.ajax({
@@ -294,7 +294,7 @@ var PortfolioDetails = React.createClass({
 				var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
 				this.setState({holdings: portfolioHoldings});
 
-				$.ajax({
+				$.ajaxQueue({
 					url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
 					dataType: 'json',
 					method: 'DELETE',
@@ -310,7 +310,7 @@ var PortfolioDetails = React.createClass({
 			else {
 				this.setState({holdings: this.state.holdings});
 
-				$.ajax({
+				$.ajaxQueue({
 					url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
 					dataType: 'json',
 					method: 'PUT',
@@ -355,24 +355,24 @@ var PortfolioDetails = React.createClass({
 	}
 })
 
-// var portfolioId = 1;
-// $.ajax({
-// 	url: '/api/portfolios/' + portfolioId,
-// 	dataType: 'json',
-// 	cache: false,
-// 	success: function(data) {
-// 		React.render(
-// 			<PortfolioDetails data={data} />,
-// 		  	document.body
-// 		);
-// 	}.bind(this),
-// 	error: function(xhr, status, err) {
-// 		console.error(this.props.url, status, err.toString());
-// 	}.bind(this)
-// });
+var portfolioId = 1;
+$.ajax({
+	url: '/api/portfolios/' + portfolioId,
+	dataType: 'json',
+	cache: false,
+	success: function(data) {
+		React.render(
+			<PortfolioDetails data={data} />,
+		  	document.body
+		);
+	}.bind(this),
+	error: function(xhr, status, err) {
+		console.error(this.props.url, status, err.toString());
+	}.bind(this)
+});
 
-React.render(
-	<PortfolioListContainer />,
-  	document.body
-);
+// React.render(
+// 	<PortfolioListContainer />,
+//   	document.body
+// );
 

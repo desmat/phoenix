@@ -1,12 +1,15 @@
 var request = require('request');
+var _ = require('underscore');
+var Quotes = require('quotes');
 
 module.exports = function(Portfolio) {
 
 	Portfolio.addRemCash = function(id, amount, cb) {
 		Portfolio.findById(id, function(err, portfolio) {
 			portfolio.cash = Math.round(100 * portfolio.cash + 100 * amount) / 100;
-			portfolio.save();
-			if (cb) cb(null, portfolio.cash);
+			portfolio.save(function() {
+				if (cb) cb(null, portfolio.cash);
+			});
 		})
 	}
 
@@ -24,26 +27,12 @@ module.exports = function(Portfolio) {
 
 				if (!portfolioHoldings || portfolioHoldings.length == 0) { if (cb) cb(null, portfolio.value); return; }
 
-				var tickersToQuery = '';
-				for (var i = 0; i < portfolioHoldings.length; i++) {
-					tickersToQuery += '%22' + portfolioHoldings[i].ticker + '%22' + '%2C';
-				}
-				tickersToQuery = tickersToQuery.substring(0, tickersToQuery.length - 3)
+				Quotes.getQuotes(_.pluck(portfolioHoldings, 'ticker'), function(err, quotes) {
+					if (err) { console.error(err); if (cb) cb(err); return; };
 
-				var tickerPrices = [];
-
-				var url = 'https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(' + tickersToQuery + ')%0A%09%09&format=json&diagnostics=false&env=http%3A%2F%2Fdatatables.org%2Falltables.env';
-				request(url, function(err, resp, body) {
-					if (err) { console.error(err); return; }
-
-					var data = JSON.parse(body);
-					if (data.query.count === 1) {
-						tickerPrices[data.query.results.quote.Symbol] = parseFloat(data.query.results.quote.LastTradePriceOnly);
-					}
-					else {
-						for (var i = 0; i < data.query.results.quote.length; i++) {
-							tickerPrices[data.query.results.quote[i].Symbol] = parseFloat(data.query.results.quote[i].LastTradePriceOnly);
-						}
+					var tickerPrices = [];
+					for (var i = 0; i < quotes.length; i++) {
+						tickerPrices[quotes[i].Symbol] = parseFloat(quotes[i].LastTradePriceOnly);
 					}
 
 					portfolio.value = portfolio.cash;
@@ -51,11 +40,10 @@ module.exports = function(Portfolio) {
 						portfolio.value = Math.round(100 * portfolio.value + 100 * portfolioHoldings[i].shares * tickerPrices[portfolioHoldings[i].ticker]) / 100;
 					}
 
-					portfolio.save(); 
-
-					if (cb) cb(null, portfolio.value);
-				});
-
+					portfolio.save(function() { 
+						if (cb) cb(null, portfolio.value);
+					}); 
+				});		
 			});
 		});
 	}
