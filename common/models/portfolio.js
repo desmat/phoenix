@@ -37,7 +37,7 @@ module.exports = function(Portfolio) {
 		Portfolio.findById(id, function(err, portfolio) {
 			Portfolio.app.models.PortfolioHolding.find({where: {portfolioId: id}}, function(err, portfolioHoldings) {
 
-				if (!portfolioHoldings || portfolioHoldings.length == 0) { if (cb) cb(null, portfolio.value); return; }
+				if (!portfolioHoldings || portfolioHoldings.length == 0) { if (cb) cb(null, portfolio); return; }
 
 				Quotes.getQuotes(_.pluck(portfolioHoldings, 'ticker'), function(err, quotes) {
 					if (err) { console.error(err); if (cb) cb(err); return; };
@@ -48,12 +48,17 @@ module.exports = function(Portfolio) {
 					}
 
 					portfolio.value = portfolio.cash;
+					portfolio.holdings = [];
 					for (var i = 0; i < portfolioHoldings.length; i++) {
-						portfolio.value = Math.round(100 * portfolio.value + 100 * portfolioHoldings[i].shares * tickerPrices[portfolioHoldings[i].ticker]) / 100;
+						portfolioHoldings[i].price = tickerPrices[portfolioHoldings[i].ticker];
+						portfolio.holdings.push(portfolioHoldings[i]);
+						portfolio.value = Math.round(100 * portfolio.value + 100 * portfolioHoldings[i].shares * portfolioHoldings[i].price) / 100;
 					}
 
+					portfolio.portfolioHoldings = portfolioHoldings;
+
 					portfolio.save(function() { 
-						if (cb) cb(null, portfolio.value);
+						if (cb) cb(null, portfolio);
 					}); 
 				});		
 			});
@@ -65,7 +70,7 @@ module.exports = function(Portfolio) {
 		{
 			http: {path: '/:id/value', verb: 'get'},
 			accepts: [{arg: 'id', type: 'number'}],
-			returns: {arg: 'value', type: 'number'}
+			returns: {arg: 'portfolio', type: 'Object'}
 		}
 	);
 
@@ -109,7 +114,11 @@ module.exports = function(Portfolio) {
 								shares: parseInt(count), 
 								cost: cost
 							}, function(err, portfolioHolding) {
-								if (cb) cb(err, 1); 
+								if (cb) {
+									Portfolio.value(id, function(err, portfolio) {
+										cb(err, portfolio); 
+									});
+								}
 								return;
 							});
 						}
@@ -117,7 +126,11 @@ module.exports = function(Portfolio) {
 							portfolioHolding.shares = Math.round(parseInt(portfolioHolding.shares) + parseInt(count));
 							portfolioHolding.cost = Math.round(100 * portfolioHolding.cost + 100 * cost) / 100;
 							portfolioHolding.save(function(err) {
-								if (cb) cb(err, 0); 
+								if (cb) {
+									Portfolio.value(id, function(err, portfolio) {
+										cb(err, portfolio); 
+									});
+								}
 								return;
 							});
 						}
@@ -180,7 +193,11 @@ module.exports = function(Portfolio) {
 							else if (count == portfolioHolding.shares) {
 								Portfolio.app.models.PortfolioHolding.destroyById(portfolioHolding.id, function(err) {
 									if (err && cb) cb(new Error ("Unable to delete holding for ticker: " + ticker), 0); 
-									else if (cb) cb(null, 0); 
+									else if (cb) {
+										Portfolio.value(id, function(err, portfolio) {
+											cb(err, portfolio); 
+										});
+									}
 									return;							
 								});
 							}
@@ -188,7 +205,11 @@ module.exports = function(Portfolio) {
 								portfolioHolding.shares = Math.round(parseInt(portfolioHolding.shares) - parseInt(count));
 								portfolioHolding.cost = Math.round(100 * portfolioHolding.cost - cost * 100) / 100;
 								portfolioHolding.save(function(err) {
-									if (cb) cb(err, 0); 
+									if (cb) {
+										Portfolio.value(id, function(err, portfolio) {
+											cb(err, portfolio); 
+										});
+									}
 									return;
 								});
 							}
@@ -204,7 +225,7 @@ module.exports = function(Portfolio) {
 		{
 			http: {path: '/:id/sell', verb: 'put'},
 			accepts: [{arg: 'id', type: 'number'}, {arg: 'ticker', type: 'string'}, {arg: 'count', type: 'number'}],
-			returns: {arg: 'value', type: 'number'}
+			returns: {arg: 'portfolio', type: 'object'}
 		}
 	);
 };

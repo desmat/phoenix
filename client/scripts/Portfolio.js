@@ -171,44 +171,26 @@ var PortfolioDetails = React.createClass({
 		return {holdings: []};
 	},
 
-	updatePortfolio: function(portfolioId) {
-		$.ajax({
-			url: '/api/portfolios/' + this.props.data.id,
-			dataType: 'json',
-			cache: false,
-			success: function(data) {
-				React.render(
-					<PortfolioDetails data={data} />,
-				  	document.body
-				);
-			}.bind(this),
-			error: function(xhr, status, err) {
-				console.error(this.props.url, status, err.toString());
-			}.bind(this)
-		});
+	updatePortfolio: function(portfolio) {
+		//render main
+		this.props.data = portfolio;
+		React.render(
+			<PortfolioDetails data={this.props.data} />,
+		  	document.body
+		);
+		//render holdings
+		this.setState({holdings: portfolio.holdings});
+	},
 
+	fetchAndUpdatePortfolio: function(portfolioId) {
+		var self = this;
 		$.ajax({
 			url: '/api/portfolios/' + this.props.data.id + '/value',
 			dataType: 'json',
 			cache: false,
 			success: function(data) {
-				this.props.data.value = data.value;
-				React.render(
-					<PortfolioDetails data={this.props.data} />,
-				  	document.body
-				);
-			}.bind(this),
-			error: function(xhr, status, err) {
-				console.error(this.props.url, status, err.toString());
-			}.bind(this)
-		});
-
-		$.ajax({
-			url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings',
-			dataType: 'json',
-			cache: false,
-			success: function(data) {
-				this.setState({holdings: data});
+				//console.dir(data);
+				self.updatePortfolio(data.portfolio);
 			}.bind(this),
 			error: function(xhr, status, err) {
 				console.error(this.props.url, status, err.toString());
@@ -217,7 +199,7 @@ var PortfolioDetails = React.createClass({
 	},
 
 	componentDidMount: function() {
-		this.updatePortfolio(this.props.data.id);
+		this.fetchAndUpdatePortfolio(this.props.data.id);
 	},
 
 	back: function() {
@@ -246,7 +228,7 @@ var PortfolioDetails = React.createClass({
 			data: JSON.stringify({ticker: ticker, count: 1}),
 			cache: false,
 			success: function(data) {	
-				self.updatePortfolio(this.props.data.id);
+				self.fetchAndUpdatePortfolio(this.props.data.id);
 			}.bind(this),
 			error: function(xhr, status, err) {
 				console.error(this.props.url, status, err.toString());
@@ -255,64 +237,19 @@ var PortfolioDetails = React.createClass({
 	},
 
 	sellHolding: function(ticker) {
+		ticker = ticker.toUpperCase();
+		var self = this;
+
 		// var portfolioHolding = _.findWhere(this.state.holdings, {ticker: ticker});
 		// //portfolio already contains this holding
 		// if (portfolioHolding) {
 		// 	portfolioHolding.shares = +portfolioHolding.shares -  1;			
-
 		// 	if (portfolioHolding.shares <= 0) {
+		// 		//remove portfolio from front-end
 		// 		var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
 		// 		this.setState({holdings: portfolioHoldings});
-
-		// 		$.ajax({
-		// 			url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
-		// 			dataType: 'json',
-		// 			method: 'DELETE',
-		// 			cache: false,
-		// 			success: function(data) {
-		// 				this.updatePortfolio(this.props.data.id);
-		// 			}.bind(this),
-		// 			error: function(xhr, status, err) {
-		// 				console.error(this.props.url, status, err.toString());
-		// 			}.bind(this)
-		// 		});			
-		// 	}
-		// 	else {
-		// 		this.setState({holdings: this.state.holdings});
-
-		// 		$.ajax({
-		// 			url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
-		// 			dataType: 'json',
-		// 			method: 'PUT',
-		// 			contentType: 'application/json',
-		// 			data: JSON.stringify(portfolioHolding),
-		// 			cache: false,
-		// 			success: function(data) {	
-		// 				this.updatePortfolio(this.props.data.id);
-		// 			}.bind(this),
-		// 			error: function(xhr, status, err) {
-		// 				console.error(this.props.url, status, err.toString());
-		// 			}.bind(this)
-		// 		});			
 		// 	}
 		// }
-		// //portfolio does not contain this holding
-		// else {
-		// 	console.log("Dude wtf");
-		// }
-		ticker = ticker.toUpperCase();
-		var self = this;
-
-		var portfolioHolding = _.findWhere(this.state.holdings, {ticker: ticker});
-		//portfolio already contains this holding
-		if (portfolioHolding) {
-			portfolioHolding.shares = +portfolioHolding.shares -  1;			
-			if (portfolioHolding.shares <= 0) {
-				//remove portfolio from front-end
-				var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
-				this.setState({holdings: portfolioHoldings});
-			}
-		}
 
 		$.ajax({
 			url: '/api/portfolios/' + this.props.data.id + '/sell',
@@ -322,7 +259,9 @@ var PortfolioDetails = React.createClass({
 			data: JSON.stringify({ticker: ticker, count: 1}),
 			cache: false,
 			success: function(data) {	
-				self.updatePortfolio(this.props.data.id);
+				console.log(data);
+				//self.fetchAndUpdatePortfolio(this.props.data.id);
+				self.updatePortfolio(data.portfolio);
 			}.bind(this),
 			error: function(xhr, status, err) {
 				console.error(this.props.url, status, err.toString());
