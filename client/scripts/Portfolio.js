@@ -237,99 +237,97 @@ var PortfolioDetails = React.createClass({
 	buyHolding: function(ticker) {
 		ticker = ticker.toUpperCase();
 		var self = this;
-		var portfolioHolding = _.findWhere(this.state.holdings, {ticker: ticker});
-		//portfolio already contains this holding
-		if (portfolioHolding) {
-			portfolioHolding.shares = +portfolioHolding.shares +  1;
-			this.setState({holdings: this.state.holdings});
 
-			$.ajax({
-				url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
-				dataType: 'json',
-				method: 'PUT',
-				contentType: 'application/json',
-				data: JSON.stringify(portfolioHolding),
-				cache: false,
-				success: function(data) {	
-					self.updatePortfolio(this.props.data.id);
-				}.bind(this),
-				error: function(xhr, status, err) {
-					console.error(this.props.url, status, err.toString());
-					_.findWhere(this.state.holdings, {ticker: ticker});
-				}.bind(this)
-			});			
-		}
-		//portfolio does not contain this holding
-		else {
-			portfolioHolding = {id:0, ticker:ticker, shares:1, cost:0};
-			this.setState({holdings: this.state.holdings.concat(portfolioHolding)}); //id will be updated later
-
-			$.ajax({
-				url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings',
-				dataType: 'json',
-				method: 'POST',
-				contentType: 'application/json',
-				data: JSON.stringify(portfolioHolding),
-				cache: false,
-				success: function(data) {
-					this.updatePortfolio(this.props.data.id);
-				}.bind(this),
-				error: function(xhr, status, err) {
-					console.error(this.props.url, status, err.toString());
-					//remove ticker from front-end
-					var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
-					this.setState({holdings: portfolioHoldings});
-				}.bind(this)
-			});			
-		}
+		$.ajax({
+			url: '/api/portfolios/' + this.props.data.id + '/buy',
+			dataType: 'json',
+			method: 'PUT',
+			contentType: 'application/json',
+			data: JSON.stringify({ticker: ticker, count: 1}),
+			cache: false,
+			success: function(data) {	
+				self.updatePortfolio(this.props.data.id);
+			}.bind(this),
+			error: function(xhr, status, err) {
+				console.error(this.props.url, status, err.toString());
+			}.bind(this)
+		});			
 	},
 
 	sellHolding: function(ticker) {
+		// var portfolioHolding = _.findWhere(this.state.holdings, {ticker: ticker});
+		// //portfolio already contains this holding
+		// if (portfolioHolding) {
+		// 	portfolioHolding.shares = +portfolioHolding.shares -  1;			
+
+		// 	if (portfolioHolding.shares <= 0) {
+		// 		var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
+		// 		this.setState({holdings: portfolioHoldings});
+
+		// 		$.ajax({
+		// 			url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
+		// 			dataType: 'json',
+		// 			method: 'DELETE',
+		// 			cache: false,
+		// 			success: function(data) {
+		// 				this.updatePortfolio(this.props.data.id);
+		// 			}.bind(this),
+		// 			error: function(xhr, status, err) {
+		// 				console.error(this.props.url, status, err.toString());
+		// 			}.bind(this)
+		// 		});			
+		// 	}
+		// 	else {
+		// 		this.setState({holdings: this.state.holdings});
+
+		// 		$.ajax({
+		// 			url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
+		// 			dataType: 'json',
+		// 			method: 'PUT',
+		// 			contentType: 'application/json',
+		// 			data: JSON.stringify(portfolioHolding),
+		// 			cache: false,
+		// 			success: function(data) {	
+		// 				this.updatePortfolio(this.props.data.id);
+		// 			}.bind(this),
+		// 			error: function(xhr, status, err) {
+		// 				console.error(this.props.url, status, err.toString());
+		// 			}.bind(this)
+		// 		});			
+		// 	}
+		// }
+		// //portfolio does not contain this holding
+		// else {
+		// 	console.log("Dude wtf");
+		// }
+		ticker = ticker.toUpperCase();
+		var self = this;
+
 		var portfolioHolding = _.findWhere(this.state.holdings, {ticker: ticker});
 		//portfolio already contains this holding
 		if (portfolioHolding) {
 			portfolioHolding.shares = +portfolioHolding.shares -  1;			
-
 			if (portfolioHolding.shares <= 0) {
+				//remove portfolio from front-end
 				var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
 				this.setState({holdings: portfolioHoldings});
-
-				$.ajax({
-					url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
-					dataType: 'json',
-					method: 'DELETE',
-					cache: false,
-					success: function(data) {
-						this.updatePortfolio(this.props.data.id);
-					}.bind(this),
-					error: function(xhr, status, err) {
-						console.error(this.props.url, status, err.toString());
-					}.bind(this)
-				});			
-			}
-			else {
-				this.setState({holdings: this.state.holdings});
-
-				$.ajax({
-					url: '/api/portfolios/' + this.props.data.id + '/portfolioHoldings/' + portfolioHolding.id,
-					dataType: 'json',
-					method: 'PUT',
-					contentType: 'application/json',
-					data: JSON.stringify(portfolioHolding),
-					cache: false,
-					success: function(data) {	
-						this.updatePortfolio(this.props.data.id);
-					}.bind(this),
-					error: function(xhr, status, err) {
-						console.error(this.props.url, status, err.toString());
-					}.bind(this)
-				});			
 			}
 		}
-		//portfolio does not contain this holding
-		else {
-			console.log("Dude wtf");
-		}
+
+		$.ajax({
+			url: '/api/portfolios/' + this.props.data.id + '/sell',
+			dataType: 'json',
+			method: 'PUT',
+			contentType: 'application/json',
+			data: JSON.stringify({ticker: ticker, count: 1}),
+			cache: false,
+			success: function(data) {	
+				self.updatePortfolio(this.props.data.id);
+			}.bind(this),
+			error: function(xhr, status, err) {
+				console.error(this.props.url, status, err.toString());
+			}.bind(this)
+		});				
 	},
 
 	render: function() {		

@@ -6,10 +6,11 @@ module.exports = function(app) {
 	], function(err, portfolios) {
     	if (err) throw err;
 
-		app.models.PortfolioHolding.create({portfolioId: portfolios[0].id, ticker: "AAPL", shares: 1});
-		app.models.PortfolioHolding.create({portfolioId: portfolios[0].id, ticker: "MSFT", shares: 2});
-		app.models.PortfolioHolding.create({portfolioId: portfolios[0].id, ticker: "YHOO", shares: 3});
-		app.models.PortfolioHolding.create({portfolioId: portfolios[1].id, ticker: "GOOG", shares: 1});
-		app.models.PortfolioHolding.create({portfolioId: portfolios[1].id, ticker: "IBM", shares: 2});
+		app.models.Portfolio.buy(portfolios[0].id, "AAPL", 1);
+		app.models.Portfolio.buy(portfolios[0].id, "MSFT", 2);
+		app.models.Portfolio.buy(portfolios[0].id, "YHOO", 3);
+		app.models.Portfolio.buy(portfolios[1].id, "GOOG", 1);
+		app.models.Portfolio.buy(portfolios[1].id, "IBM", 2);
 	});
+
 }
