@@ -7,10 +7,10 @@ module.exports = function(app) {
     	if (err) throw err;
 
 		app.models.Portfolio.buy(portfolios[0].id, "AAPL", 1);
-		app.models.Portfolio.buy(portfolios[0].id, "MSFT", 2);
-		app.models.Portfolio.buy(portfolios[0].id, "YHOO", 3);
-		app.models.Portfolio.buy(portfolios[1].id, "GOOG", 1);
-		app.models.Portfolio.buy(portfolios[1].id, "IBM", 2);
+		// app.models.Portfolio.buy(portfolios[0].id, "MSFT", 2);
+		// app.models.Portfolio.buy(portfolios[0].id, "YHOO", 3);
+		// app.models.Portfolio.buy(portfolios[1].id, "GOOG", 1);
+		// app.models.Portfolio.buy(portfolios[1].id, "IBM", 2);
 	});
 
 }
