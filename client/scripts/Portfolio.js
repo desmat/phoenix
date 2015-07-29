@@ -280,8 +280,8 @@ var PortfolioDetails = React.createClass({
 		return(
 			<div class="portfolioDetails">
 				<h1>Portfolio: {this.props.data.name}</h1>
-				<h2>Value: ${this.props.data.value}</h2>
-				<h2>Cash: ${this.props.data.cash}</h2>
+				<h2>Value: ${this.props.data.valueCalculated}</h2>
+				<h2>Cash: ${this.props.data.cashCalculated}</h2>
 				<h2>Holdings</h2>
 				<ul>
 					{holdings}
@@ -292,24 +292,24 @@ var PortfolioDetails = React.createClass({
 	}
 })
 
-var portfolioId = 1;
-$.ajax({
-	url: '/api/portfolios/' + portfolioId,
-	dataType: 'json',
-	cache: false,
-	success: function(data) {
-		React.render(
-			<PortfolioDetails data={data} />,
-		  	document.body
-		);
-	}.bind(this),
-	error: function(xhr, status, err) {
-		console.error(this.props.url, status, err.toString());
-	}.bind(this)
-});
+// var portfolioId = 1;
+// $.ajax({
+// 	url: '/api/portfolios/' + portfolioId,
+// 	dataType: 'json',
+// 	cache: false,
+// 	success: function(data) {
+// 		React.render(
+// 			<PortfolioDetails data={data} />,
+// 		  	document.body
+// 		);
+// 	}.bind(this),
+// 	error: function(xhr, status, err) {
+// 		console.error(this.props.url, status, err.toString());
+// 	}.bind(this)
+// });
 
-// React.render(
-// 	<PortfolioListContainer />,
-//   	document.body
-// );
+React.render(
+	<PortfolioListContainer />,
+  	document.body
+);
 

@@ -39,5 +39,9 @@
   "PortfolioHolding": {
     "dataSource": "db",
     "public": true
+  },
+  "PortfolioTransaction": {
+    "dataSource": "db",
+    "public": true
   }
 }

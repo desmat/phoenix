@@ -4,64 +4,79 @@ var Quotes = require('quotes');
 
 module.exports = function(Portfolio) {
 
-	Portfolio.addRemCash = function(id, amount, cb) {
-		Portfolio.findById(id, function(err, portfolio) {		
-			if (!portfolio) {
-				if (cb) cb(new Error("2Portfolio not found: " + id));
-				return;
-			}	
-
-			portfolio.cash = Math.round(100 * portfolio.cash + 100 * amount) / 100;
-
-			if (portfolio.cash < 0) {
-				if (cb) cb(new Error("Insufficient funds"));
-				return;
-			}
-
-			portfolio.save(function() {
-				if (cb) cb(null, portfolio.cash);
-				return;
-			});
-		})
-	}
-
-	Portfolio.remoteMethod(
-		'addRemCash', 
-		{
-			accepts: [{arg: 'id', type: 'number'}, {arg: 'amount', type: 'number'}],
-			returns: {arg: 'balance', type: 'number'}
-		}
-	);
-
 	Portfolio.value = function(id, cb) {
 		Portfolio.findById(id, function(err, portfolio) {
+
 			portfolio.holdings = [];
-			Portfolio.app.models.PortfolioHolding.find({where: {portfolioId: id}}, function(err, portfolioHoldings) {
+			portfolio.cashCalculated = portfolio.cash;
 
-				if (!portfolioHoldings || portfolioHoldings.length == 0) { if (cb) cb(null, portfolio); return; }
+			Portfolio.app.models.PortfolioTransaction.find({where: {portfolioId: id, rejected: false}, order: 'id ASC'}, function(err, portfolioTransactions) {
 
-				Quotes.getQuotes(_.pluck(portfolioHoldings, 'ticker'), function(err, quotes) {
+				if (err) { console.error(err); if (cb) cb(err); return; };
+
+				_.each(portfolioTransactions, function(portfolioTransaction) {
+
+					var portfolioHolding = _.findWhere(portfolio.holdings, {ticker: portfolioTransaction.ticker});
+
+					if (!portfolioHolding) {
+						portfolioHolding = {
+							portfolioId: id,
+							ticker: portfolioTransaction.ticker, 
+							name: null,
+							shares: 0, 
+							cost: 0,
+						};	
+						portfolio.holdings.push(portfolioHolding);
+					}
+
+					var updatedCash = Math.round(100 * portfolio.cashCalculated - 100 * portfolioTransaction.cost * (portfolioTransaction.count < 0 ? -1 : 1)) / 100;
+					var updatedShares = Math.round(parseInt(portfolioHolding.shares) + parseInt(portfolioTransaction.count));
+					var updatedCost = Math.round(100 * portfolioHolding.cost + 100 * portfolioTransaction.cost * (portfolioTransaction.count < 0 ? -1 : 1)) / 100;
+
+					if (updatedCash < 0) {
+						console.error("Rejecting transaction #" + portfolioTransaction.id + ": Insufficient funds");
+						portfolioTransaction.rejected = true;
+						portfolioTransaction.save();
+					}
+					if (updatedShares < 0) {
+						console.error("Rejecting transaction #" + portfolioTransaction.id + ": Negative share count");
+						portfolioTransaction.rejected = true;
+						portfolioTransaction.save();
+					}
+					// if (updatedCost < 0) {
+					// 	console.error("Rejecting transaction #" + portfolioTransaction.id + ": Negative holding cost");
+					// 	portfolioTransaction.rejected = true;
+					// 	portfolioTransaction.save();
+					// }
+					else {
+						portfolioHolding.shares = updatedShares;
+						portfolioHolding.cost = updatedCost;
+						portfolio.cashCalculated = updatedCash;
+
+						if (updatedShares == 0) {
+							portfolio.holdings = _.without(portfolio.holdings, portfolioHolding);
+						}
+					}
+				});
+
+				portfolio.valueCalculated = portfolio.cashCalculated;
+
+				Quotes.getQuotes(_.pluck(portfolio.holdings, 'ticker'), function(err, quotes) {
+
 					if (err) { console.error(err); if (cb) cb(err); return; };
 
-					var tickerPrices = [];
-					for (var i = 0; i < quotes.length; i++) {
-						tickerPrices[quotes[i].Symbol] = parseFloat(quotes[i].LastTradePriceOnly);
-					}
+					_.each(quotes, function(quote) {
+						var portfolioHolding = _.findWhere(portfolio.holdings, {ticker: quote.Symbol}); 							
+						if (portfolioHolding) {
+							// portfolioHolding = portfolioHolding[0];
+							portfolioHolding.name = quote.Name;
+							portfolioHolding.price = quote.LastTradePriceOnly;
+							portfolio.valueCalculated = Math.round(100 * portfolio.valueCalculated + 100 * portfolioHolding.shares * portfolioHolding.price) / 100;
+						}
+					});
 
-					portfolio.value = portfolio.cash;
-					portfolio.holdings = [];
-					for (var i = 0; i < portfolioHoldings.length; i++) {
-						portfolioHoldings[i].price = tickerPrices[portfolioHoldings[i].ticker];
-						portfolio.holdings.push(portfolioHoldings[i]);
-						portfolio.value = Math.round(100 * portfolio.value + 100 * portfolioHoldings[i].shares * portfolioHoldings[i].price) / 100;
-					}
-
-					portfolio.portfolioHoldings = portfolioHoldings;
-
-					portfolio.save(function() { 
-						if (cb) cb(null, portfolio);
-					}); 
-				});		
+					if (cb) cb(null, portfolio);
+				});
 			});
 		});
 	}
@@ -84,6 +99,8 @@ module.exports = function(Portfolio) {
 				return;
 			}	
 
+			ticker = ticker.toUpperCase();
+
 			Quotes.getQuote(ticker, function(err, quote) {
 				if (err) {
 					if (cb) cb(err);
@@ -99,43 +116,23 @@ module.exports = function(Portfolio) {
 				var price = parseFloat(quote.LastTradePriceOnly);
 				var cost = Math.round(100 * price * count) / 100;
 
-				Portfolio.addRemCash(id, -cost, function(err, portfolio) {
+				Portfolio.app.models.PortfolioTransaction.create({
+					portfolioId: id, 
+					ticker: ticker, 
+					count: count, 
+					cost: cost
+				}, function(err, portfolioTransaction) {
 					if (err) {
-						console.error(err);
 						if (cb) cb(err);
-						return;
 					}
 
-					Portfolio.app.models.PortfolioHolding.findOne({where: {portfolioId: id, ticker: ticker}}, function(err, portfolioHolding) {
-						if (!portfolioHolding) {
-							Portfolio.app.models.PortfolioHolding.create({
-								portfolioId: id,
-								name: name,
-								ticker: ticker,
-								shares: parseInt(count), 
-								cost: cost
-							}, function(err, portfolioHolding) {
-								if (cb) {
-									Portfolio.value(id, function(err, portfolio) {
-										cb(err, portfolio); 
-									});
-								}
-								return;
-							});
-						}
-						else {
-							portfolioHolding.shares = Math.round(parseInt(portfolioHolding.shares) + parseInt(count));
-							portfolioHolding.cost = Math.round(100 * portfolioHolding.cost + 100 * cost) / 100;
-							portfolioHolding.save(function(err) {
-								if (cb) {
-									Portfolio.value(id, function(err, portfolio) {
-										cb(err, portfolio); 
-									});
-								}
-								return;
-							});
-						}
-					});
+					if (cb) {
+						Portfolio.value(id, function(err, portfolio) {
+							cb(err, portfolio); 
+						});
+					}
+
+					return;
 				});
 			});
 		});
@@ -159,6 +156,8 @@ module.exports = function(Portfolio) {
 				return;
 			}	
 
+			ticker = ticker.toUpperCase();
+
 			Quotes.getQuote(ticker, function(err, quote) {
 				if (err) {
 					if (cb) cb(err);
@@ -174,50 +173,23 @@ module.exports = function(Portfolio) {
 				var price = parseFloat(quote.LastTradePriceOnly);
 				var cost = Math.round(100 * price * count) / 100;
 
-				Portfolio.addRemCash(id, cost, function(err, portfolio) {
+				Portfolio.app.models.PortfolioTransaction.create({
+					portfolioId: id, 
+					ticker: ticker, 
+					count: count * -1, 
+					cost: cost
+				}, function(err, portfolioTransaction) {
 					if (err) {
-						console.error(err);
 						if (cb) cb(err);
-						return;
 					}
 
-					Portfolio.app.models.PortfolioHolding.findOne({where: {portfolioId: id, ticker: ticker}}, function(err, portfolioHolding) {
-						if (!portfolioHolding) {
-							if (cb) cb(new Error ("Holding not found: " + ticker), 0); 
-							return;							
-						}
-						else {
-							if (count > portfolioHolding.shares) {
-								if (cb) cb(new Error ("Not enough shares: " + ticker), 0); 
-								return;							
-							}
-							else if (count == portfolioHolding.shares) {
-								Portfolio.app.models.PortfolioHolding.destroyById(portfolioHolding.id, function(err) {
-									if (err && cb) {
-										cb(new Error ("Unable to delete holding for ticker: " + ticker), 0); 
-									}
-									else if (cb) {
-										Portfolio.value(id, function(err, portfolio) {
-											cb(err, portfolio); 
-										});
-									}
-									return;							
-								});
-							}
-							else {
-								portfolioHolding.shares = Math.round(parseInt(portfolioHolding.shares) - parseInt(count));
-								portfolioHolding.cost = Math.round(100 * portfolioHolding.cost - cost * 100) / 100;
-								portfolioHolding.save(function(err) {
-									if (cb) {
-										Portfolio.value(id, function(err, portfolio) {
-											cb(err, portfolio); 
-										});
-									}
-									return;
-								});
-							}
-						}
-					});
+					if (cb) {
+						Portfolio.value(id, function(err, portfolio) {
+							cb(err, portfolio); 
+						});
+					}
+
+					return;
 				});
 			});
 		});
