@@ -5,77 +5,135 @@ var Quotes = require('quotes');
 module.exports = function(Portfolio) {
 
 	Portfolio.value = function(id, cb) {
+		//load up our portfolio
 		Portfolio.findById(id, function(err, portfolio) {
+			if (err) { console.error(err); if (cb) cb(err); return; };
 
 			portfolio.holdings = [];
 			portfolio.cashCalculated = portfolio.cash;
 
-			Portfolio.app.models.PortfolioTransaction.find({where: {portfolioId: id, rejected: false}, order: 'id ASC'}, function(err, portfolioTransactions) {
-
+			//load up latest checkpoint
+			Portfolio.app.models.PortfolioCheckpoint.findOne({where: {portfolioId: id}, order: 'id DESC', limit: 1}, function(err, portfolioCheckpoint) {
 				if (err) { console.error(err); if (cb) cb(err); return; };
 
-				_.each(portfolioTransactions, function(portfolioTransaction) {
+				var checkpointTransactionId = 0;
 
-					var portfolioHolding = _.findWhere(portfolio.holdings, {ticker: portfolioTransaction.ticker});
+				if (portfolioCheckpoint) {
+					checkpointTransactionId = portfolioCheckpoint.transactionId;
+					portfolio.cashCalculated = portfolioCheckpoint.cash;
+				}
 
-					if (!portfolioHolding) {
-						portfolioHolding = {
-							portfolioId: id,
-							ticker: portfolioTransaction.ticker, 
-							name: null,
-							shares: 0, 
-							cost: 0,
-						};	
-						portfolio.holdings.push(portfolioHolding);
-					}
-
-					var updatedCash = Math.round(100 * portfolio.cashCalculated - 100 * portfolioTransaction.cost * (portfolioTransaction.count < 0 ? -1 : 1)) / 100;
-					var updatedShares = Math.round(parseInt(portfolioHolding.shares) + parseInt(portfolioTransaction.count));
-					var updatedCost = Math.round(100 * portfolioHolding.cost + 100 * portfolioTransaction.cost * (portfolioTransaction.count < 0 ? -1 : 1)) / 100;
-
-					if (updatedCash < 0) {
-						console.error("Rejecting transaction #" + portfolioTransaction.id + ": Insufficient funds");
-						portfolioTransaction.rejected = true;
-						portfolioTransaction.save();
-					}
-					if (updatedShares < 0) {
-						console.error("Rejecting transaction #" + portfolioTransaction.id + ": Negative share count");
-						portfolioTransaction.rejected = true;
-						portfolioTransaction.save();
-					}
-					// if (updatedCost < 0) {
-					// 	console.error("Rejecting transaction #" + portfolioTransaction.id + ": Negative holding cost");
-					// 	portfolioTransaction.rejected = true;
-					// 	portfolioTransaction.save();
-					// }
-					else {
-						portfolioHolding.shares = updatedShares;
-						portfolioHolding.cost = updatedCost;
-						portfolio.cashCalculated = updatedCash;
-
-						if (updatedShares == 0) {
-							portfolio.holdings = _.without(portfolio.holdings, portfolioHolding);
-						}
-					}
-				});
-
-				portfolio.valueCalculated = portfolio.cashCalculated;
-
-				Quotes.getQuotes(_.pluck(portfolio.holdings, 'ticker'), function(err, quotes) {
-
+				//load up checkpoint holdings
+				Portfolio.app.models.PortfolioHolding.find({where: {portfolioId: id, checkpointTransactionId: checkpointTransactionId}}, function(err, portfolioHoldings) {
 					if (err) { console.error(err); if (cb) cb(err); return; };
 
-					_.each(quotes, function(quote) {
-						var portfolioHolding = _.findWhere(portfolio.holdings, {ticker: quote.Symbol}); 							
-						if (portfolioHolding) {
-							// portfolioHolding = portfolioHolding[0];
-							portfolioHolding.name = quote.Name;
-							portfolioHolding.price = quote.LastTradePriceOnly;
-							portfolio.valueCalculated = Math.round(100 * portfolio.valueCalculated + 100 * portfolioHolding.shares * portfolioHolding.price) / 100;
-						}
+					_.each(portfolioHoldings, function(portfolioHolding) {
+						if (portfolioHolding.shares > 0) portfolio.holdings.push(portfolioHolding);
 					});
 
-					if (cb) cb(null, portfolio);
+					//process any transactions newer than checkpoint
+					Portfolio.app.models.PortfolioTransaction.findOne({where: {portfolioId: id, rejected: false, id: {gt: checkpointTransactionId}}, order: 'id DESC', limit: 1}, function(err, maxPortfolioTransaction) {
+
+						var maxPortfolioTransactionId = Number.MAX_VALUE;
+						if (maxPortfolioTransaction) {
+							maxPortfolioTransactionId = maxPortfolioTransaction.id;
+						}
+
+						Portfolio.app.models.PortfolioTransaction.find({where: {portfolioId: id, rejected: false, id: {gt: checkpointTransactionId, lt: maxPortfolioTransactionId + 1}}, order: 'id ASC'}, function(err, portfolioTransactions) {
+							if (err) { console.error(err); if (cb) cb(err); return; };
+
+							_.each(portfolioTransactions, function(portfolioTransaction) {
+			
+								checkpointTransactionId = portfolioTransaction.id;
+								var portfolioHolding = _.findWhere(portfolio.holdings, {ticker: portfolioTransaction.ticker});
+
+								if (!portfolioHolding) {
+									portfolioHolding = {
+										portfolioId: id,
+										ticker: portfolioTransaction.ticker, 
+										name: null,
+										shares: 0, 
+										cost: 0,
+									};	
+									portfolio.holdings.push(portfolioHolding);
+								}
+
+								var updatedCash = Math.round(100 * portfolio.cashCalculated - 100 * portfolioTransaction.cost * (portfolioTransaction.count < 0 ? -1 : 1)) / 100;
+								var updatedShares = Math.round(parseInt(portfolioHolding.shares) + parseInt(portfolioTransaction.count));
+								var updatedCost = Math.round(100 * portfolioHolding.cost + 100 * portfolioTransaction.cost * (portfolioTransaction.count < 0 ? -1 : 1)) / 100;
+
+								if (updatedCash < 0) {
+									console.error("Rejecting transaction #" + portfolioTransaction.id + ": Insufficient funds");
+									portfolioTransaction.rejected = true;
+									portfolioTransaction.save();
+								}
+								if (updatedShares < 0) {
+									console.error("Rejecting transaction #" + portfolioTransaction.id + ": Negative share count");
+									portfolioTransaction.rejected = true;
+									portfolioTransaction.save();
+								}
+								// if (updatedCost < 0) {
+								// 	console.error("Rejecting transaction #" + portfolioTransaction.id + ": Negative holding cost");
+								// 	portfolioTransaction.rejected = true;
+								// 	portfolioTransaction.save();
+								// }
+								else {
+									portfolioHolding.shares = updatedShares;
+									portfolioHolding.cost = updatedCost;
+									portfolio.cashCalculated = updatedCash;
+
+									if (updatedShares == 0) {
+										portfolio.holdings = _.without(portfolio.holdings, portfolioHolding);
+									}
+								}
+							});
+
+							portfolio.valueCalculated = portfolio.cashCalculated;
+
+							Quotes.getQuotes(_.pluck(portfolio.holdings, 'ticker'), function(err, quotes) {
+
+								if (err) { console.error(err); if (cb) cb(err); return; };
+
+								_.each(quotes, function(quote) {
+									var portfolioHolding = _.findWhere(portfolio.holdings, {ticker: quote.Symbol}); 							
+									if (portfolioHolding) {
+										// portfolioHolding = portfolioHolding[0];
+										portfolioHolding.name = quote.Name;
+										portfolioHolding.price = quote.LastTradePriceOnly;
+										portfolio.valueCalculated = Math.round(100 * portfolio.valueCalculated + 100 * portfolioHolding.shares * portfolioHolding.price) / 100;
+									}
+								});
+
+								//record check point only if we had transactions
+								if (portfolioTransactions.length > 0) {
+									Portfolio.app.models.PortfolioCheckpoint.create({
+										portfolioId: id, 
+										transactionId: checkpointTransactionId, 
+										cash: portfolio.cashCalculated
+									}, function(err, portfolioCheckpoint) {
+										//create holding checkpoints
+										_.each(portfolio.holdings, function(portfolioHolding) {
+											Portfolio.app.models.PortfolioHolding.create({
+												portfolioId: id, 
+												checkpointTransactionId: checkpointTransactionId, 
+												name: portfolioHolding.name,
+												ticker: portfolioHolding.ticker,
+												shares: portfolioHolding.shares, 
+												cost: portfolioHolding.cost
+											}, function(err) {
+												if (err) { console.error(err); }
+											});
+										});
+
+										if (cb) cb(null, portfolio);
+									});
+								}
+								else {
+									if (cb) cb(null, portfolio);
+								}
+							});
+						});					
+					});					
 				});
 			});
 		});

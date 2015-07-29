@@ -1,0 +1,26 @@
+{
+  "name": "PortfolioCheckpoint",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "portfolioId": {
+      "type": "number",
+      "required": true
+    },
+    "transactionId": {
+      "type": "number",
+      "required": true
+    },
+    "cash": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": []
+}

@@ -21,6 +21,10 @@
     "cost": {
       "type": "number",
       "required": true
+    },
+    "checkpointTransactionId": {
+      "type": "number",
+      "required": false
     }
   },
   "validations": [],

@@ -43,5 +43,9 @@
   "PortfolioTransaction": {
     "dataSource": "db",
     "public": true
+  },
+  "PortfolioCheckpoint": {
+    "dataSource": "db",
+    "public": true
   }
 }
