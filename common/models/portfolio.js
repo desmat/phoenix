@@ -35,6 +35,7 @@ module.exports = function(Portfolio) {
 
 	Portfolio.value = function(id, cb) {
 		Portfolio.findById(id, function(err, portfolio) {
+			portfolio.holdings = [];
 			Portfolio.app.models.PortfolioHolding.find({where: {portfolioId: id}}, function(err, portfolioHoldings) {
 
 				if (!portfolioHoldings || portfolioHoldings.length == 0) { if (cb) cb(null, portfolio); return; }
@@ -192,7 +193,9 @@ module.exports = function(Portfolio) {
 							}
 							else if (count == portfolioHolding.shares) {
 								Portfolio.app.models.PortfolioHolding.destroyById(portfolioHolding.id, function(err) {
-									if (err && cb) cb(new Error ("Unable to delete holding for ticker: " + ticker), 0); 
+									if (err && cb) {
+										cb(new Error ("Unable to delete holding for ticker: " + ticker), 0); 
+									}
 									else if (cb) {
 										Portfolio.value(id, function(err, portfolio) {
 											cb(err, portfolio); 
