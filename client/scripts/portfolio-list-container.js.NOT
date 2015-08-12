@@ -1,0 +1,10 @@
+var PortfolioListContainer = React.createClass({
+	render: function() {
+		return(
+			<div class="portfolioListContainer">
+				<h1>Portfolios</h1>
+				<PortfolioList />
+			</div>
+		);
+	}	
+});

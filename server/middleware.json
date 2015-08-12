@@ -18,7 +18,7 @@
   "routes": {},
   "files": {
     "loopback#static": {
-      "params": "$!../client"
+      "params": "$!../client-dist"
     }
   },
   "final": {

@@ -1,0 +1,127 @@
+var PortfolioDetails = React.createClass({
+	getInitialState: function() {
+		return {holdings: []};
+	},
+
+	updatePortfolio: function(portfolio) {
+		//render main
+		this.props.data = portfolio;
+		React.render(
+			<PortfolioDetails data={this.props.data} />,
+		  	document.body
+		);
+		//render holdings
+		this.setState({holdings: portfolio.holdings});
+	},
+
+	fetchAndUpdatePortfolio: function(portfolioId) {
+		var self = this;
+		$.ajax({
+			url: '/api/portfolios/' + this.props.data.id + '/value',
+			dataType: 'json',
+			cache: false,
+			success: function(data) {
+				//console.dir(data);
+				self.updatePortfolio(data.portfolio);
+			}.bind(this),
+			error: function(xhr, status, err) {
+				console.error(this.props.url, status, err.toString());
+			}.bind(this)
+		});
+	},
+
+	componentDidMount: function() {
+		this.fetchAndUpdatePortfolio(this.props.data.id);
+	},
+
+	back: function() {
+		React.render(
+			<PortfolioListContainer />,
+		  	document.body
+		);
+	}, 
+
+	addHolding: function() {
+		var ticker = window.prompt("Ticker");
+		if (ticker) {
+			this.buyHolding(ticker);
+		}
+	},
+
+	buyHolding: function(ticker) {
+		ticker = ticker.toUpperCase();
+		var self = this;
+
+		$.ajax({
+			url: '/api/portfolios/' + this.props.data.id + '/buy',
+			dataType: 'json',
+			method: 'PUT',
+			contentType: 'application/json',
+			data: JSON.stringify({ticker: ticker, count: 1}),
+			cache: false,
+			success: function(data) {	
+				self.fetchAndUpdatePortfolio(this.props.data.id);
+			}.bind(this),
+			error: function(xhr, status, err) {
+				console.error(this.props.url, status, err.toString());
+			}.bind(this)
+		});			
+	},
+
+	sellHolding: function(ticker) {
+		ticker = ticker.toUpperCase();
+		var self = this;
+
+		// var portfolioHolding = _.findWhere(this.state.holdings, {ticker: ticker});
+		// //portfolio already contains this holding
+		// if (portfolioHolding) {
+		// 	portfolioHolding.shares = +portfolioHolding.shares -  1;			
+		// 	if (portfolioHolding.shares <= 0) {
+		// 		//remove portfolio from front-end
+		// 		var portfolioHoldings = _.difference(this.state.holdings, _.where(this.state.holdings, {ticker:ticker}));
+		// 		this.setState({holdings: portfolioHoldings});
+		// 	}
+		// }
+
+		$.ajax({
+			url: '/api/portfolios/' + this.props.data.id + '/sell',
+			dataType: 'json',
+			method: 'PUT',
+			contentType: 'application/json',
+			data: JSON.stringify({ticker: ticker, count: 1}),
+			cache: false,
+			success: function(data) {	
+				console.log(data);
+				//self.fetchAndUpdatePortfolio(this.props.data.id);
+				self.updatePortfolio(data.portfolio);
+			}.bind(this),
+			error: function(xhr, status, err) {
+				console.error(this.props.url, status, err.toString());
+			}.bind(this)
+		});				
+	},
+
+	render: function() {		
+		var self = this;
+		var holdings = _.sortBy(this.state.holdings, 'ticker').map(function(holding) {
+			return (	
+				<PortfolioHolding data={holding}  buyHolding={self.buyHolding} sellHolding={self.sellHolding}/>
+			);
+		});
+
+		// var hello = new Helloworld('asdf');
+
+		return(
+			<div class="portfolioDetails">
+				<h1>Portfolio: {this.props.data.name}</h1>
+				<h2>Value: ${this.props.data.valueCalculated}</h2>
+				<h2>Cash: ${this.props.data.cashCalculated}</h2>
+				<h2>Holdings</h2>
+				<ul>
+					{holdings}
+				</ul>
+				<a href="#" onClick={this.back}>[Back]</a> <a href="#" onClick={this.addHolding}>[Add Holding]</a>
+			</div>
+		);
+	}
+})

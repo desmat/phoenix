@@ -290,26 +290,9 @@ var PortfolioDetails = React.createClass({
 			</div>
 		);
 	}
-})
-
-var portfolioId = 1;
-$.ajax({
-	url: '/api/portfolios/' + portfolioId,
-	dataType: 'json',
-	cache: false,
-	success: function(data) {
-		React.render(
-			<PortfolioDetails data={data} />,
-		  	document.body
-		);
-	}.bind(this),
-	error: function(xhr, status, err) {
-		console.error(this.props.url, status, err.toString());
-	}.bind(this)
 });
 
 React.render(
 	<PortfolioListContainer />,
   	document.body
 );
-

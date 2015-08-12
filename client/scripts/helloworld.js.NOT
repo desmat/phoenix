@@ -1,0 +1,13 @@
+
+
+class Helloworld {
+	constructor(message) {
+		// super(message)
+
+		this.message = message
+	}
+
+	get message() {
+		return message
+	}
+}
