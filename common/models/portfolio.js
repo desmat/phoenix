@@ -89,6 +89,7 @@ module.exports = function(Portfolio) {
 							});
 
 							portfolio.valueCalculated = portfolio.cashCalculated;
+							portfolio.costCalculated = 0;
 
 							Quotes.getQuotes(_.pluck(portfolio.holdings, 'ticker'), function(err, quotes) {
 
@@ -100,9 +101,19 @@ module.exports = function(Portfolio) {
 										// portfolioHolding = portfolioHolding[0];
 										portfolioHolding.name = quote.Name;
 										portfolioHolding.price = quote.LastTradePriceOnly;
+										portfolioHolding.value = Math.round(100 * portfolioHolding.shares * portfolioHolding.price) / 100;
+										portfolioHolding.returnPercent = Math.round(10000 * (portfolioHolding.value - portfolioHolding.cost) / portfolioHolding.cost) / 100;
 										portfolio.valueCalculated = Math.round(100 * portfolio.valueCalculated + 100 * portfolioHolding.shares * portfolioHolding.price) / 100;
+										portfolio.costCalculated = Math.round(100 * portfolio.costCalculated + 100 * portfolioHolding.cost) / 100;
 									}
 								});
+
+								//this is what I think we should do, however...
+								// portfolio.returnPercent = Math.round(100000 * (portfolio.valueCalculated - (portfolio.costCalculated + portfolio.cashCalculated)) / (portfolio.costCalculated + portfolio.cashCalculated)) / 100;
+								
+								//...this is what google finance seems to do (based on cost)
+								portfolio.returnPercent = Math.round(10000 * (portfolio.valueCalculated - (portfolio.costCalculated + portfolio.cashCalculated)) / portfolio.costCalculated) / 100;
+
 
 								//record check point only if we had transactions
 								if (portfolioTransactions.length > 0) {
