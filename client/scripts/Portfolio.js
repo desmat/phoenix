@@ -161,7 +161,7 @@ var PortfolioHolding = React.createClass({
 
 	render : function() {
 		return (
-			<li>{this.props.data.name} ({this.props.data.ticker}): {this.props.data.shares} shares, ${this.props.data.cost} cost <a href="#" onClick={this.sell}>[Sell]</a> <a href="#" onClick={this.buy}>[Buy]</a></li>
+			<li>{this.props.data.name} ({this.props.data.ticker}): {this.props.data.shares} shares, ${this.props.data.value} ({this.props.data.returnPercent}% return) <a href="#" onClick={this.sell}>[Sell]</a> <a href="#" onClick={this.buy}>[Buy]</a></li>
 		);
 	}
 })
@@ -280,7 +280,7 @@ var PortfolioDetails = React.createClass({
 		return(
 			<div class="portfolioDetails">
 				<h1>Portfolio: {this.props.data.name}</h1>
-				<h2>Value: ${this.props.data.valueCalculated}</h2>
+				<h2>Value: ${this.props.data.valueCalculated} ({this.props.data.returnPercent}% return)</h2>
 				<h2>Cash: ${this.props.data.cashCalculated}</h2>
 				<h2>Holdings</h2>
 				<ul>
